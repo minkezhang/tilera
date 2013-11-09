@@ -3,8 +3,9 @@
 #include <tmc/cmem.h>
 #include <math.h>
 
-#include "data.h"
 #include "config.h"
+#include "data.h"
+#include "file.h"
 #include "jacobi.h"
 
 typedef ilibStatus ilib_status_t;
@@ -12,12 +13,12 @@ typedef ilibStatus ilib_status_t;
 void * p_calloc(size_t x, size_t y, int line) {
 	void *ret = calloc(x, y);
 	// check calloc isn't allocating kernel space memory
-	if(ret > (void *) 0xc0000000) {
+	if(ret > (void *) PHYS_BASE) {
 		printf("calloc_error with return val 0x%08x at line %d\n", ret, line);
-		return NULL;
+		return(NULL);
 	}
 
-	return ret;
+	return(ret);
 }
 
 #define calloc(x, y) p_calloc(x, y, __LINE__)
@@ -51,6 +52,15 @@ int main() {
 	}
 
 	if(tid == ROOT) {
+		int dim;
+
+		double *c = get_b("input/simple_b.txt", &dim);
+		printf("jacobi dim 0x%08x val %i\n", &dim, dim);
+		printf("jacobi c 0x%08x\n", c);
+		for(int i = 0; i < dim; i++) {
+			printf("jacobi: b[%i] %f\n", i, c[i]);
+		}
+		
 		// placeholder - assuming data is loaded
 		double **a = (double **) calloc(DIM, sizeof(double *));
 		for(int i = 0; i < DIM; i++) {
@@ -76,8 +86,8 @@ int main() {
 
 	for(int step = 0; step < 10; step++) {
 		thread_data->thread_error = 0.0;
-		for(int row = 0; row < thread_data->thread_rows; row++) {								// i
-			int i = thread_data->thread_offset + row;									// global_i
+		for(int row = 0; row < thread_data->thread_rows; row++) {		// i
+			int i = thread_data->thread_offset + row;			// global_i
 			double sum_1 = 0.0;
 			double sum_2 = 0.0;
 			for(int j = 0; j < i; j++) {
@@ -104,7 +114,7 @@ int main() {
 				ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, tid, &te, sizeof(double), &status);
 				error += te;
 
-				// recieve iterative x vector
+				// receive iterative x vector
 				ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, tid, thread_data->thread_xt + (tid * thread_data->thread_rows), thread_data->thread_rows * sizeof(double), &status);
 			} else {
 				// broadcast error to everyone else
@@ -114,7 +124,6 @@ int main() {
 				ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, tid, thread_data->thread_x, thread_data->thread_rows * sizeof(double), &status);
 			}
 		}
-		printf("error is %f\n", error);
 	}
 
 	data_vomit(thread_data);

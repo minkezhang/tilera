@@ -7,6 +7,12 @@
  * Some will eventually be converted into command-line arguments.
  */
 
+// Define the upper limit of user memory space.
+#define PHYS_BASE 0xc0000000
+
+// Maximum line buffer length.
+#define MAX_BUF 128
+
 // Total number of cores to simulate.
 #define CORES 10
 
