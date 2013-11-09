@@ -54,28 +54,32 @@ int main() {
 	if(tid == ROOT) {
 		int dim;
 
-		double *c = get_b("input/simple_b.txt", &dim);
-		printf("jacobi dim 0x%08x val %i\n", &dim, dim);
-		printf("jacobi c 0x%08x\n", c);
-		for(int i = 0; i < dim; i++) {
-			printf("jacobi: b[%i] %f\n", i, c[i]);
-		}
+		double *b = get_b("input/simple_b.txt", &dim);
+
+		// double *b = (double *) calloc(DIM, sizeof(double));
+		// for(int i = 0; i < DIM; i++) {
+		//	b[i] = 12.4;
+		// }
+
+		// printf("jacobi dim 0x%08x val %i\n", &dim, dim);
+		// printf("jacobi b 0x%08x\n", b);
+		// for(int i = 0; i < dim; i++) {
+		//	printf("jacobi: b[%i] %f\n", i, b[i]);
+		// }
 		
 		// placeholder - assuming data is loaded
 		double **a = (double **) calloc(DIM, sizeof(double *));
 		for(int i = 0; i < DIM; i++) {
 			a[i] = (double *) calloc(DIM, sizeof(double));
 		}
-		double *b = (double *) calloc(DIM, sizeof(double));
 
 		// DEBUG test set thingies
 		for(int i = 0; i < DIM; i++) {
 			for(int j = 0; j < DIM; j++) {
-				a[i][j] = 1.2;
+				if(i == j) {
+					a[i][j] = 1.0;
+				}
 			}
-		}
-		for(int i = 0; i < DIM; i++) {
-			b[i] = 12.4;
 		}
 
 		double *x = (double *) calloc(DIM, sizeof(double));
@@ -111,18 +115,21 @@ int main() {
 			ilib_status_t status;
 			if(tid != thread_data->tid) {
 				// receive error from everyone
-				ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, tid, &te, sizeof(double), &status);
+				// ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, tid, &te, sizeof(double), &status);
 				error += te;
 
 				// receive iterative x vector
 				ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, tid, thread_data->thread_xt + (tid * thread_data->thread_rows), thread_data->thread_rows * sizeof(double), &status);
 			} else {
 				// broadcast error to everyone else
-				ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, tid, &(thread_data->thread_error), sizeof(double), &status);
+				// ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, tid, &(thread_data->thread_error), sizeof(double), &status);
 
 				// broadcast own x vector calculations
 				ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, tid, thread_data->thread_x, thread_data->thread_rows * sizeof(double), &status);
 			}
+		}
+		if(error < 0.001) {
+			break;
 		}
 	}
 
