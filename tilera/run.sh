@@ -3,7 +3,7 @@
 EXECUTABLE=jacobi
 PIPE=pipe
 OUT=results.txt
-FOLDER=sample
+FOLDER=sparse_0.0
 
 rm $OUT
 

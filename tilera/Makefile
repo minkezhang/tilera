@@ -21,7 +21,8 @@ check: clean $(EXECUTABLE)
 	{ time tile-monitor --batch-mode --image tile64 --upload $(EXECUTABLE) $(EXECUTABLE) --upload $(PIPE) $(PIPE) --run - $(EXECUTABLE) $(SAMPLE) $(CORES) - --download $(PIPE) $(PIPE) --download $(PIPE) $(PIPE) ; } >> $(OUT) 2>&1
 
 run: purge $(EXECUTABLE)
-	./$(RUN)
+	python generate.py
+	./$(RUN) &> $(OUT)
 
 clean:
 	rm -f $(EXECUTABLE) $(OBJECTS)
