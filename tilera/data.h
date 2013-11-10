@@ -23,6 +23,7 @@ typedef struct data_t {
 } data;
 
 data * data_init(void);
+void data_allocate(data *);
 void data_vomit(data *);
 
 #endif
