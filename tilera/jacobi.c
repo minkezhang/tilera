@@ -24,19 +24,24 @@ int main() {
 	thread_data->tid = tid;
 	thread_data->lim = lim;
 
-	data_dim(thread_data, DIM);
+	int dim = DIM;
 
 	if(thread_data->tid == ROOT) {
-		int dim = DIM;
-
 		double *b = get_b("input/simple/b.txt", &dim);
 		double **a = get_a("input/simple/a.txt", dim);
-
 		double *x = (double *) calloc(dim, sizeof(double));
 	
-		mastr_initialize(thread_data, lim, a, b);
+		ilib_status_t status;
+		ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, ROOT, &dim, sizeof(dim), &status);
+		data_dim(thread_data, dim);
+
+		mastr_initialize(thread_data, lim, a, b, dim);
+	} else {
+		ilib_status_t status;
+		ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, ROOT, &dim, sizeof(dim), &status);
+
+		slave_initialize(thread_data, thread_data->tid);
 	}
-	slave_initialize(thread_data, thread_data->tid);
 
 	// ilib_msg_barrier(ILIB_GROUP_SIBLINGS);
 
@@ -106,7 +111,7 @@ int main() {
 /**
  * Pass initial data to the other nodes.
  */
-int mastr_initialize(data *thread_data, int lim, double **a, double *b) {
+int mastr_initialize(data *thread_data, int lim, double **a, double *b, int dim) {
 	for(int tid = 1; tid < lim; tid++) {
 		for(int row = 0; row < thread_data->thread_rows; row++) {
 			ilib_msg_send(ILIB_GROUP_SIBLINGS, tid, MSG_HANDLE, a[tid * thread_data->thread_rows + row], DIM * sizeof(double));
@@ -134,6 +139,5 @@ int slave_initialize(data *thread_data, int tid) {
 		}
 		ilib_msg_receive(ILIB_GROUP_SIBLINGS, ROOT, MSG_HANDLE + 1, thread_data->thread_b, thread_data->thread_rows * sizeof(double), &status);
 	}
-
 	return(0);
 }

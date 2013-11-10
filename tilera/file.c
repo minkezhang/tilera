@@ -37,7 +37,6 @@ double ** get_a(char *filename, int dim) {
 	char *tok_ptr;
 
 	while(getline(&line_buf, &m, fp) != -1) {
-		printf("line buf %s\n", line_buf);
 		cur_element = 0;
 		for(tok = strtok_r(line_buf, " ", &tok_ptr); tok; tok = strtok_r(NULL, " ", &tok_ptr)) {
 			sscanf(tok, "%lf", &result);
@@ -75,6 +74,7 @@ double * get_b(char *filename, int *dim) {
 	double result;
 
 	while(getline(&line_buf, &m, fp) != -1) {
+		printf("line buf %s\n", line_buf);
 		sscanf(line_buf, "%lf\n", &result);
 		if(n >= size) {
 			size++;

@@ -3,7 +3,7 @@
 
 #include "data.h"
 
-int mastr_initialize(data *, int, double **, double *);
+int mastr_initialize(data *, int, double **, double *, int);
 int slave_initialize(data *, int);
 
 #endif
