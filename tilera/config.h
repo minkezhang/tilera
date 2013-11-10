@@ -14,7 +14,7 @@
 #define MAX_ITERATIONS 10000
 
 // Maximum line buffer length.
-#define MAX_BUF 256
+#define MAX_BUF 1024
 
 // Defines the convergence limit.
 #define EPSILON 0.001

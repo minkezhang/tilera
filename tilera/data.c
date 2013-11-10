@@ -22,7 +22,7 @@ data * data_init() {
 void data_allocate(data *thread) {
 	thread->thread_a = (double **) calloc(thread->thread_rows, sizeof(double *));
 	for(int row = 0; row < thread->thread_rows; row++) {
-		thread->thread_a[row] = (double *) calloc(DIM, sizeof(double));
+		thread->thread_a[row] = (double *) calloc(thread->dim, sizeof(double));
 	}
 	thread->thread_b = (double *) calloc(thread->thread_rows, sizeof(double));
 	thread->thread_x = (double *) calloc(thread->thread_rows, sizeof(double));
