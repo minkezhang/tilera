@@ -5,7 +5,7 @@ PIPE=pipe
 OUT=results.txt
 FOLDER=sparse16_0.0
 
-rm $OUT
+rm -rf $OUT
 
 for CORES in 1 2 4 8 16 # 32 64
 do
