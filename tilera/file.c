@@ -74,7 +74,6 @@ double * get_b(char *filename, int *dim) {
 	double result;
 
 	while(getline(&line_buf, &m, fp) != -1) {
-		printf("line buf %s\n", line_buf);
 		sscanf(line_buf, "%lf\n", &result);
 		if(n >= size) {
 			size++;
@@ -86,6 +85,16 @@ double * get_b(char *filename, int *dim) {
 
 	*dim = n;
 	return(b);
+}
+
+/**
+ * Write the x vector to the output file.
+ */
+void set_x(double *x, int dim, char *filename) {
+	FILE *fp = get_fp(filename, "w");
+	for(int row = 0; row < dim; row++) {
+		fprintf(fp, "%f\n", x[row]);
+	}
 }
 
 /**

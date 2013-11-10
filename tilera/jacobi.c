@@ -1,7 +1,8 @@
+#include <errno.h>
 #include <ilib.h>
+#include <math.h>
 #include <stdio.h>
 #include <tmc/cmem.h>
-#include <math.h>
 
 #include "config.h"
 #include "data.h"
@@ -10,10 +11,30 @@
 
 typedef ilibStatus ilib_status_t;
 
-int main() {
+int main(int argc, char *argv[]) {
+	char *folder = (char *) calloc(MAX_BUF, sizeof(char));
+	int cores;
+	if(argc == 3) {
+		sscanf(argv[1], "%s", folder);
+		sscanf(argv[2], "%i", &cores);
+	} else {
+		char *cmd = calloc(MAX_BUF, sizeof(char));
+		sscanf(argv[0], "/%s", cmd);
+		fprintf(stderr, "usage: %s [ folder ] [ cores ]\n", cmd);
+		return(0);
+	}
+
+	char *pipe_a = (char *) calloc(MAX_BUF, sizeof(char));
+	char *pipe_b = (char *) calloc(MAX_BUF, sizeof(char));
+	char *pipe_x = (char *) calloc(MAX_BUF, sizeof(char));
+
+	sprintf(pipe_a, "pipe/%s/a.txt", folder);
+	sprintf(pipe_b, "pipe/%s/b.txt", folder);
+	sprintf(pipe_x, "pipe/%s/x_%i.txt", folder, cores);
+
 	ilib_init();
 
-	if(ilib_proc_go_parallel(CORES, NULL) != ILIB_SUCCESS) {
+	if(ilib_proc_go_parallel(cores, argv) != ILIB_SUCCESS) {
 		ilib_die("Fatal error - cannot proceed.");
 	}
 
@@ -24,27 +45,42 @@ int main() {
 	thread_data->tid = tid;
 	thread_data->lim = lim;
 
-	int dim = DIM;
-
 	if(thread_data->tid == ROOT) {
-		double *b = get_b("input/simple/b.txt", &dim);
-		double **a = get_a("input/simple/a.txt", dim);
+		int dim = DIM;
+		double *b = get_b(pipe_b, &dim);
+		double **a = get_a(pipe_a, dim);
 		double *x = (double *) calloc(dim, sizeof(double));
 	
 		ilib_status_t status;
 		ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, ROOT, &dim, sizeof(dim), &status);
-		data_dim(thread_data, dim);
 
+		data_dim(thread_data, dim);
 		mastr_initialize(thread_data, lim, a, b, dim);
+
+		fprintf(stderr, "\nfolder %s, dim %i, cores %i\n", folder, dim, cores);
 	} else {
+		int dim = DIM;
 		ilib_status_t status;
 		ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, ROOT, &dim, sizeof(dim), &status);
 
-		slave_initialize(thread_data, thread_data->tid);
+		data_dim(thread_data, dim);
+		slave_initialize(thread_data);
 	}
 
-	// ilib_msg_barrier(ILIB_GROUP_SIBLINGS);
+	int result = iterate(thread_data);
 
+	// return data
+	if(thread_data->tid == ROOT) {
+		set_x(thread_data->thread_xt, thread_data->dim, pipe_x);
+	} else {
+	}
+
+
+	ilib_finish();
+	return(result);
+}
+
+int iterate(data *thread_data) {
 	for(int step = 0; step < MAX_ITERATIONS; step++) {
 		thread_data->thread_error = 0.0;
 		int i = thread_data->thread_offset;					// global_i
@@ -63,7 +99,6 @@ int main() {
 			// check if estimates converge
 			double x = thread_data->thread_x[row] - thread_data->thread_xt[i];
 			thread_data->thread_error += x * x;
-
 			i++;
 		}
 
@@ -90,21 +125,11 @@ int main() {
 			}
 		}
 
-		// ilib_msg_barrier(ILIB_GROUP_SIBLINGS);
-
-		// Test for convergence.
+		// test for convergence
 		if(error < EPSILON) {
 			break;
 		}
 	}
-
-	// ... gather data and process by ROOT
-	if(thread_data->tid == ROOT) {
-		data_vomit(thread_data);
-	} else {
-	}
-
-	ilib_finish();
 	return(0);
 }
 
@@ -131,13 +156,11 @@ int mastr_initialize(data *thread_data, int lim, double **a, double *b, int dim)
 /**
  * Prep data for processing.
  */
-int slave_initialize(data *thread_data, int tid) {
+int slave_initialize(data *thread_data) {
 	ilib_status_t status;
-	if(tid != ROOT) {
-		for(int row = 0; row < thread_data->thread_rows; row++) {
-			ilib_msg_receive(ILIB_GROUP_SIBLINGS, ROOT, MSG_HANDLE, thread_data->thread_a[row], DIM * sizeof(double), &status);
-		}
-		ilib_msg_receive(ILIB_GROUP_SIBLINGS, ROOT, MSG_HANDLE + 1, thread_data->thread_b, thread_data->thread_rows * sizeof(double), &status);
+	for(int row = 0; row < thread_data->thread_rows; row++) {
+		ilib_msg_receive(ILIB_GROUP_SIBLINGS, ROOT, MSG_HANDLE, thread_data->thread_a[row], DIM * sizeof(double), &status);
 	}
+	ilib_msg_receive(ILIB_GROUP_SIBLINGS, ROOT, MSG_HANDLE + 1, thread_data->thread_b, thread_data->thread_rows * sizeof(double), &status);
 	return(0);
 }

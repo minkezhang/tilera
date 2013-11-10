@@ -49,11 +49,12 @@ void data_vomit(data *thread) {
 	printf("
 thread vomit for %i
 	thread_rows	%i
+	thread_lim	%i
 	thread_offset	%i
 	thread_error	%.2f
 	thread_a	0x%08x
 	thread_b	0x%08x
-	thread_x	0x%08x\n", thread->tid, thread->thread_rows, thread->thread_offset, thread->thread_error, thread->thread_a, thread->thread_b, thread->thread_x);
+	thread_x	0x%08x\n", thread->tid, thread->thread_rows, thread->lim, thread->thread_offset, thread->thread_error, thread->thread_a, thread->thread_b, thread->thread_x);
 
 	// print local a
 	for(int i = 0; i < thread->thread_rows; i++) {
@@ -77,7 +78,7 @@ thread vomit for %i
 
 	// print merged x
 	if(thread->tid == ROOT) {
-		for(int i = 0; i < DIM; i++) {
+		for(int i = 0; i < thread->dim; i++) {
 			printf("\t(%i) x[%i]\t%.2f\n", thread->tid, i, thread->thread_xt[i]);
 		}
 	}

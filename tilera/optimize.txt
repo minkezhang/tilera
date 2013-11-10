@@ -1,0 +1,27 @@
+time values for different levels of optimization, as per s2.1.1 (pg 5) of
+	http://www.tilera.com/scm/docs/UG105-Optimization-Guide.pdf
+
+----------
+folder simple, dim 10, cores 2 -O3
+
+real	1m26.635s
+user	1m23.701s
+sys	0m2.918s
+----------
+folder simple, dim 10, cores 2 -O2
+
+real	1m26.123s
+user	1m23.057s
+sys	0m3.053s
+----------
+folder simple, dim 10, cores 2 -O1
+
+real	1m26.717s
+user	1m23.836s
+sys	0m2.862s
+----------
+folder simple, dim 10, cores 2 -Os
+
+real	1m25.232s
+user	1m21.569s
+sys	0m3.647s
