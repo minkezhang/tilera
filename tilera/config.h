@@ -10,8 +10,11 @@
 // Define the upper limit of user memory space.
 #define PHYS_BASE 0xc0000000
 
+// Define the maximum number of times in which the program attempts to converge the x-vector guess.
+#define MAX_ITERATIONS 10000
+
 // Maximum line buffer length.
-#define MAX_BUF 128
+#define MAX_BUF 256
 
 // Defines the convergence limit.
 #define EPSILON 0.001

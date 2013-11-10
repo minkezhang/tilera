@@ -39,44 +39,20 @@ int main() {
 	}
 
 	if(thread_data->tid == ROOT) {
-		int dim;
+		int dim = DIM;
 
-		double **a = get_a("input/simple/a.txt", &dim);
 		double *b = get_b("input/simple/b.txt", &dim);
+		double **a = get_a("input/simple/a.txt", dim);
 
-		/*
-		// assert(dim == DIM);
-
-			// DEBUG placeholder - assuming data is loaded
-			double **a = (double **) calloc(DIM, sizeof(double *));
-			for(int i = 0; i < DIM; i++) {
-				a[i] = (double *) calloc(DIM, sizeof(double));
-			}
-
-			// DEBUG test set thingies
-			for(int i = 0; i < DIM; i++) {
-				for(int j = 0; j < DIM; j++) {
-					if(i == j) {
-						if(i == DIM - 1) {
-							a[i][j] = 20.0;
-						} else {
-							a[i][j] = 1.0;
-						}
-					} else {
-						a[i][j] = 0.0;
-					}
-				}
-			}
-		*/
 		double *x = (double *) calloc(DIM, sizeof(double));
-
+	
 		mastr_initialize(thread_data, lim, a, b);
 	}
 	slave_initialize(thread_data, thread_data->tid);
 
 	// ilib_msg_barrier(ILIB_GROUP_SIBLINGS);
 
-	for(int step = 0; step < 10; step++) {
+	for(int step = 0; step < MAX_ITERATIONS; step++) {
 		thread_data->thread_error = 0.0;
 		int i = thread_data->thread_offset;					// global_i
 		for(int row = 0; row < thread_data->thread_rows; row++) {		// i
@@ -98,10 +74,9 @@ int main() {
 			i++;
 		}
 
-		// get global error and x vectors
+		// sync x guesses, and get global error
 		double error = thread_data->thread_error;
 		double error_t;
-
 		memcpy(thread_data->thread_xt + thread_data->thread_offset, thread_data->thread_x, thread_data->thread_rows * sizeof(double));
 		for(int tid = 0; tid < thread_data->lim; tid++) {
 			ilib_status_t status;
@@ -121,7 +96,10 @@ int main() {
 				ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, tid, thread_data->thread_x, thread_data->thread_rows * sizeof(double), &status);
 			}
 		}
+
 		// ilib_msg_barrier(ILIB_GROUP_SIBLINGS);
+
+		// Test for convergence.
 		if(error < EPSILON) {
 			break;
 		}

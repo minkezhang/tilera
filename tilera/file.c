@@ -10,59 +10,43 @@
 FILE * get_fp(char *, char *);
 
 /**
- * The a matrix is given in the file with format (where a_ij = a[i][j])
+ * The a matrix is given in the file with format (where a_ij = a[i][j]) (and where i is the row within the file).
  *
  * a_11 ... a_1n
  *      ...
  * a_n1 ... a_nn
+ *
+ * The int dim refers the dimension of the dim x dim array, and is set as a side-effect by get_b().
  */
-double ** get_a(char *filename, int *dim) {
-	int n = 0;
-	size_t size = 0;
-	double **a = NULL;
+double ** get_a(char *filename, int dim) {
+	double **a = calloc(dim, sizeof(double *));
+	for(int row = 0; row < dim; row++) {
+		a[row] = calloc(dim, sizeof(double));
+	}
 
 	FILE *fp = get_fp(filename, "r");
 
-	size_t e = MAX_BUF;
-	char *line_buf = calloc(e, sizeof(char));
-	double *row;
+	size_t m = MAX_BUF;
+	char *line_buf = calloc(m, sizeof(char));
+
 	double result;
-	int m = 0;
-	size_t m_size = 0;
+	int cur_row = 0;
+	int cur_element;
 
 	char *tok;
 	char *tok_ptr;
 
-	while(getline(&line_buf, &e, fp) != -1) {
-		printf("new line %s\n", line_buf);
-		if(n >= size) {
-			size++;
-			a = realloc(a, size * sizeof(double *));
-			printf("reallocated a\n");
-		}
-
-		m = 0;
-		m_size = 0;
-		row = NULL;
+	while(getline(&line_buf, &m, fp) != -1) {
+		printf("line buf %s\n", line_buf);
+		cur_element = 0;
 		for(tok = strtok_r(line_buf, " ", &tok_ptr); tok; tok = strtok_r(NULL, " ", &tok_ptr)) {
-		// while((tok = strtok_r(line_buf, " ", &tok_ptr)) != NULL) {
-			printf("new token %s\n", tok);
-			if(m >= m_size) {
-				m_size++;
-				row = realloc(row, m_size * sizeof(double));	
-			}
-			printf("reallocated row\n");
 			sscanf(tok, "%lf", &result);
-			printf("scanned double %f\n", result);
-			row[m] = result;
-			printf("stored double into spot %i\n", m);
-			m++;
+			a[cur_row][cur_element] = result;
+			cur_element++;
 		}
-		a[n] = row;
-		n++;
+		cur_row++;
 	}
 
-	*dim = n;
 	return(a);
 }
 
@@ -72,12 +56,16 @@ double ** get_a(char *filename, int *dim) {
  * b_1
  * ...
  * b_n
+ *
+ * The pointer to dim is either NULL or refers to some best guess of the dimensions of the array;
+ *	get_b() will set dim to the actual size as a side-effect.
  */
 double * get_b(char *filename, int *dim) {
 	int n = 0;
-	size_t size = 0;
+	size_t size;
 
-	double *b = NULL;
+	size = *dim;
+	double *b = calloc(size, sizeof(double));
 
 	// Get the file specified.
 	FILE *fp = get_fp(filename, "r");
