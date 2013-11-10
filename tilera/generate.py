@@ -40,5 +40,5 @@ def rand_int(bound):
 
 for i in xrange(10):
 	noise = i / 10.
-	main("pipe/sparse128_" + str(noise), 128, noise)
-
+	dim = 16
+	main("pipe/sparse" + str(dim) + "_" + str(noise), dim, noise)

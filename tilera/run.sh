@@ -3,11 +3,11 @@
 EXECUTABLE=jacobi
 PIPE=pipe
 OUT=results.txt
-FOLDER=sparse128_0.0
+FOLDER=sparse16_0.0
 
 rm $OUT
 
-for CORES in 1 2 4 8 16 32 64
+for CORES in 1 2 4 8 16 # 32 64
 do
 	echo running $CORES
 	date
