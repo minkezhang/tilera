@@ -23,7 +23,9 @@ int main() {
 	data *thread_data = data_init();
 	thread_data->tid = tid;
 	thread_data->lim = lim;
-	thread_data->thread_rows = (int) floor(DIM / lim);
+	thread_data->dim = DIM;
+
+	thread_data->thread_rows = (int) floor(thread_data->dim / lim);
 	thread_data->thread_offset = tid * thread_data->thread_rows;
 
 	// allocate memory for data in each thread
@@ -33,7 +35,7 @@ int main() {
 	}
 	thread_data->thread_b = (double *) calloc(thread_data->thread_rows, sizeof(double));
 	thread_data->thread_x = (double *) calloc(thread_data->thread_rows, sizeof(double));
-	thread_data->thread_xt = (double *) calloc(DIM, sizeof(double));
+	thread_data->thread_xt = (double *) calloc(thread_data->dim, sizeof(double));
 	for(int row = 0; row < DIM; row++) {
 		thread_data->thread_xt[row] = 1.0;
 	}

@@ -4,6 +4,8 @@
 typedef struct data_t {
 	int tid;
 	int lim;
+	// the dimensions of the n x n array
+	int dim;
 
 	int thread_rows;
 	int thread_offset;
