@@ -13,6 +13,9 @@
 // Maximum line buffer length.
 #define MAX_BUF 128
 
+// Defines the convergence limit.
+#define EPSILON 0.001
+
 // Total number of cores to simulate.
 #define CORES 10
 

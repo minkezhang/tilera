@@ -10,19 +10,6 @@
 
 typedef ilibStatus ilib_status_t;
 
-void * p_calloc(size_t x, size_t y, int line) {
-	void *ret = calloc(x, y);
-	// check calloc isn't allocating kernel space memory
-	if(ret > (void *) PHYS_BASE) {
-		printf("calloc_error with return val 0x%08x at line %d\n", ret, line);
-		return(NULL);
-	}
-
-	return(ret);
-}
-
-#define calloc(x, y) p_calloc(x, y, __LINE__)
-
 int main() {
 	ilib_init();
 
@@ -85,7 +72,6 @@ int main() {
 
 	ilib_msg_barrier(ILIB_GROUP_SIBLINGS);
 
-	printf("[%i] starting loop...", thread_data->tid);
 	for(int step = 0; step < 10; step++) {
 		thread_data->thread_error = 0.0;
 		int i = thread_data->thread_offset;					// global_i
@@ -100,7 +86,6 @@ int main() {
 			}
 
 			thread_data->thread_x[row] = (-lower - upper + thread_data->thread_b[row]) / thread_data->thread_a[row][i];
-			printf("(%i), -lower - upper + b[row] / a[row][i] = %f - %f + %f / %f = %f\n", thread_data->tid, lower, upper, thread_data->thread_b[row], thread_data->thread_a[row][i], thread_data->thread_x[row]);
 
 			// check if estimates converge
 			double x = thread_data->thread_x[row] - thread_data->thread_xt[i];
@@ -113,7 +98,6 @@ int main() {
 		double error = thread_data->thread_error;
 		double error_t;
 
-		printf("(%i) x before loop with %.2f\n", thread_data->tid, thread_data->thread_x[0]);
 		memcpy(thread_data->thread_xt + thread_data->thread_offset, thread_data->thread_x, thread_data->thread_rows * sizeof(double));
 		for(int tid = 0; tid < thread_data->lim; tid++) {
 			ilib_status_t status;
@@ -121,34 +105,27 @@ int main() {
 				// receive error from everyone
 				ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, tid, &error_t, sizeof(double), &status);
 				error += error_t;
-				// printf("(%i) receiving (%i) error %.2f (total %.2f)\n", thread_data->tid, tid, error_t, error);
 
 				// receive iterative x vector
 				ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, tid, thread_data->thread_xt + (tid * thread_data->thread_rows), thread_data->thread_rows * sizeof(double), &status);
-				// printf("(%i) receiving from (%i), value starting with %.2f\n", thread_data->tid, tid, thread_data->thread_xt[tid * thread_data->thread_rows]);
 			} else {
 				// broadcast error to everyone else
 				ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, tid, &(thread_data->thread_error), sizeof(double), &status);
-				// printf("(%i) broadcasting error %.2f\n", thread_data->tid, thread_data->thread_error);
 
 
 				// broadcast own x vector calculations
 				ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, tid, thread_data->thread_x, thread_data->thread_rows * sizeof(double), &status);
-				printf("(%i) broadcasting values starting with %.2f\n", thread_data->tid, thread_data->thread_x[0]);
 			}
 		}
 		ilib_msg_barrier(ILIB_GROUP_SIBLINGS);
-		// if(error < 0.001) {
-		//	break;
-		// }
+		if(error < EPSILON) {
+			break;
+		}
 	}
-
-	printf("[%i] exiting loop...", thread_data->tid);
-
-	data_vomit(thread_data);
 
 	// ... gather data and process by ROOT
 	if(thread_data->tid == ROOT) {
+		data_vomit(thread_data);
 	} else {
 	}
 
