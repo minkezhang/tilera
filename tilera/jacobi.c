@@ -23,25 +23,8 @@ int main() {
 	data *thread_data = data_init();
 	thread_data->tid = tid;
 	thread_data->lim = lim;
-	thread_data->dim = DIM;
 
-	thread_data->thread_rows = (int) floor(thread_data->dim / lim);
-	thread_data->thread_offset = tid * thread_data->thread_rows;
-
-	// allocate memory for data in each thread
-	data_allocate(thread_data);
-	/*
-	thread_data->thread_a = (double **) calloc(thread_data->thread_rows, sizeof(double *));
-	for(int row = 0; row < thread_data->thread_rows; row++) {
-		thread_data->thread_a[row] = (double *) calloc(DIM, sizeof(double));
-	}
-	thread_data->thread_b = (double *) calloc(thread_data->thread_rows, sizeof(double));
-	thread_data->thread_x = (double *) calloc(thread_data->thread_rows, sizeof(double));
-	thread_data->thread_xt = (double *) calloc(thread_data->dim, sizeof(double));
-	for(int row = 0; row < thread_data->dim; row++) {
-		thread_data->thread_xt[row] = 1.0;
-	}
-	*/
+	data_dim(thread_data, DIM);
 
 	if(thread_data->tid == ROOT) {
 		int dim = DIM;
@@ -49,7 +32,7 @@ int main() {
 		double *b = get_b("input/simple/b.txt", &dim);
 		double **a = get_a("input/simple/a.txt", dim);
 
-		double *x = (double *) calloc(DIM, sizeof(double));
+		double *x = (double *) calloc(dim, sizeof(double));
 	
 		mastr_initialize(thread_data, lim, a, b);
 	}

@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -29,6 +30,19 @@ void data_allocate(data *thread) {
 	for(int row = 0; row < thread->dim; row++) {
 		thread->thread_xt[row] = 1.0;
 	}
+}
+
+/**
+ * Sets the dimensions of the data struct arrays and allocates enough memory to store data.
+ */
+void data_dim(data *thread, int dim) {
+	thread->dim = dim;
+
+	thread->thread_rows = (int) floor(thread->dim / thread->lim);
+	thread->thread_offset = thread->tid * thread->thread_rows;
+
+	// allocate memory for data in each thread
+	data_allocate(thread);
 }
 
 void data_vomit(data *thread) {
