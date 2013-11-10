@@ -41,9 +41,10 @@ int main() {
 	if(thread_data->tid == ROOT) {
 		int dim;
 
+		double **a = get_a("input/simple/a.txt", &dim);
 		double *b = get_b("input/simple/b.txt", &dim);
-		// double *a = get_a("input/simple/a.txt", &dim);
 
+		/*
 		// assert(dim == DIM);
 
 			// DEBUG placeholder - assuming data is loaded
@@ -66,7 +67,7 @@ int main() {
 					}
 				}
 			}
-
+		*/
 		double *x = (double *) calloc(DIM, sizeof(double));
 
 		mastr_initialize(thread_data, lim, a, b);
