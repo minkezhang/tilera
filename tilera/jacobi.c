@@ -41,28 +41,31 @@ int main() {
 	if(thread_data->tid == ROOT) {
 		int dim;
 
-		double *b = get_b("input/simple_b.txt", &dim);
+		double *b = get_b("input/simple/b.txt", &dim);
+		// double *a = get_a("input/simple/a.txt", &dim);
 
-		// DEBUG placeholder - assuming data is loaded
-		double **a = (double **) calloc(DIM, sizeof(double *));
-		for(int i = 0; i < DIM; i++) {
-			a[i] = (double *) calloc(DIM, sizeof(double));
-		}
+		// assert(dim == DIM);
 
-		// DEBUG test set thingies
-		for(int i = 0; i < DIM; i++) {
-			for(int j = 0; j < DIM; j++) {
-				if(i == j) {
-					if(i == DIM - 1) {
-						a[i][j] = 20.0;
+			// DEBUG placeholder - assuming data is loaded
+			double **a = (double **) calloc(DIM, sizeof(double *));
+			for(int i = 0; i < DIM; i++) {
+				a[i] = (double *) calloc(DIM, sizeof(double));
+			}
+
+			// DEBUG test set thingies
+			for(int i = 0; i < DIM; i++) {
+				for(int j = 0; j < DIM; j++) {
+					if(i == j) {
+						if(i == DIM - 1) {
+							a[i][j] = 20.0;
+						} else {
+							a[i][j] = 1.0;
+						}
 					} else {
-						a[i][j] = 1.0;
+						a[i][j] = 0.0;
 					}
-				} else {
-					a[i][j] = 0.0;
 				}
 			}
-		}
 
 		double *x = (double *) calloc(DIM, sizeof(double));
 
@@ -70,7 +73,7 @@ int main() {
 	}
 	slave_initialize(thread_data, thread_data->tid);
 
-	ilib_msg_barrier(ILIB_GROUP_SIBLINGS);
+	// ilib_msg_barrier(ILIB_GROUP_SIBLINGS);
 
 	for(int step = 0; step < 10; step++) {
 		thread_data->thread_error = 0.0;
@@ -117,7 +120,7 @@ int main() {
 				ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, tid, thread_data->thread_x, thread_data->thread_rows * sizeof(double), &status);
 			}
 		}
-		ilib_msg_barrier(ILIB_GROUP_SIBLINGS);
+		// ilib_msg_barrier(ILIB_GROUP_SIBLINGS);
 		if(error < EPSILON) {
 			break;
 		}

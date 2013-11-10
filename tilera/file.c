@@ -31,8 +31,7 @@ double * get_b(char *filename, int *dim) {
 	int n = 0;
 	size_t size = 0;
 
-	double *b = calloc(DIM, sizeof(double));
-	// double *b = NULL;
+	double *b = NULL;
 
 	// Get the file specified.
 	FILE *fp = get_fp(filename, "r");
@@ -43,19 +42,9 @@ double * get_b(char *filename, int *dim) {
 
 	while(getline(&line_buf, &m, fp) != -1) {
 		sscanf(line_buf, "%lf\n", &result);
-		if(n >= DIM * sizeof(double)) {
-		// if(n >= size) {
-			size += sizeof(double);
-			printf("n %i, size %i\n", n, size);
-			// double *t = realloc(b, size);
-			// double *t = sizeof(b) + sizeof(double);
-			// if(t != NULL) {
-			//	free(b);
-			//	b = t;
-			//	printf("successfully reallocated b\n");
-			// } else {
-			// 	printf("realloc returned null =[\n");
-			// }
+		if(n >= size) {
+			size++;
+			b = realloc(b, size * sizeof(double));
 		}
 		b[n] = result;
 		n++;

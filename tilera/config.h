@@ -17,7 +17,7 @@
 #define EPSILON 0.001
 
 // Total number of cores to simulate.
-#define CORES 10
+#define CORES 1
 
 // Defines the root node ID.
 #define ROOT 0
