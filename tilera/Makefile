@@ -22,7 +22,7 @@ check: clean $(EXECUTABLE)
 
 run: purge $(EXECUTABLE)
 	python generate.py
-	./$(RUN) &> $(OUT)
+	./$(RUN)
 
 clean:
 	rm -f $(EXECUTABLE) $(OBJECTS)
