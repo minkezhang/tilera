@@ -15,7 +15,7 @@ do
 			for NOISE in 0.1 0.9
 			do
 				FOLDER=$HEADER$DIM\_$NOISE
-				OUT=$RESULTS/$FOLDER.txt
+				OUT=$RESULTS/$DIM\_$CORES\_$NOISE.txt
 				rm -rf $OUT
 				echo "running n = $DIM on $CORES cores with noise = $NOISE -- $FOLDER"
 				date
