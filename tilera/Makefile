@@ -24,7 +24,7 @@ check: clean $(EXECUTABLE)
 
 run: purge $(EXECUTABLE)
 	python generate.py
-	./$(RUN)
+	nohup ./$(RUN) &
 
 clean:
 	rm -f $(EXECUTABLE) $(OBJECTS)
