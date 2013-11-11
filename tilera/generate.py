@@ -6,7 +6,7 @@ def main(folder, size, noise):
 	if(not path.exists(folder)):
 		mkdir(folder)
 
-	bound = 100
+	bound = 10
 	a = []
 	# generate a
 	for i in xrange(size):
@@ -16,6 +16,12 @@ def main(folder, size, noise):
 				tmp_row.append(rand_int(bound))
 			else:
 				tmp_row.append(0)
+		# need to check for convergence condition, as per http://bit.ly/1aPZ5d6
+		while((sum([ abs(x) for x in tmp_row ]) - abs(tmp_row[i])) > abs(tmp_row[i])):
+			if(tmp_row[i] > 0):
+				tmp_row[i] += random() * bound;
+			else:
+				tmp_row[i] -= random() * bound;
 		a.append(tmp_row)
 	x = []
 	# generate x
@@ -36,7 +42,11 @@ def main(folder, size, noise):
 		fp_b.write(str(b[i]) + "\n")
 
 def rand_int(bound):
-	return(ceil(random() * bound) + 1)
+	val = (random() - 0.5) * bound
+	if(abs(val) < 0.0001):
+		dir = (random() > .5) * 2 - 1
+		val += 1 * dir
+	return(val)
 
 for i in xrange(10):
 	noise = i / 10.

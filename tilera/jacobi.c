@@ -72,9 +72,12 @@ int main(int argc, char *argv[]) {
 	// return data
 	if(thread_data->tid == ROOT) {
 		set_x(thread_data->thread_xt, thread_data->dim, pipe_x);
-	} else {
+		if(result == FAILURE) {
+			fprintf(stderr, "failed to converge\n");
+		}
 	}
 
+	ilib_msg_barrier(ILIB_GROUP_SIBLINGS);
 
 	ilib_finish();
 	return(result);
@@ -83,29 +86,42 @@ int main(int argc, char *argv[]) {
 int iterate(data *thread_data) {
 	for(int step = 0; step < MAX_ITERATIONS; step++) {
 		thread_data->thread_error = 0.0;
-		int i = thread_data->thread_offset;					// global_i
+		int i;
 		for(int row = 0; row < thread_data->thread_rows; row++) {		// i
+			i = thread_data->thread_offset + row;				// global_i
 			double lower = 0.0;
 			double upper = 0.0;
 			for(int j = 0; j < i; j++) {
 				lower += thread_data->thread_a[row][j] * thread_data->thread_xt[j];
+				// printf("lower (row = %i, j = %i) (= %f) * x[j = %i] (= %f) = %f\n", row, j, thread_data->thread_a[row][j], j, thread_data->thread_xt[j], thread_data->thread_a[row][j] * thread_data->thread_xt[j]);
+
+				
 			}
 			for(int j = i + 1; j < thread_data->dim; j++) {
 				upper += thread_data->thread_a[row][j] * thread_data->thread_xt[j];
+				// printf("upper (row = %i, j = %i) (= %f) * x[j = %i] (= %f) = %f\n", row, j, thread_data->thread_a[row][j], j, thread_data->thread_xt[j], thread_data->thread_a[row][j] * thread_data->thread_xt[j]);
 			}
 
-			thread_data->thread_x[row] = (-lower - upper + thread_data->thread_b[row]) / thread_data->thread_a[row][i];
+			thread_data->thread_x[row] = (thread_data->thread_b[row] - (lower + upper)) / thread_data->thread_a[row][i];
+
+			// printf("x[%i] = %f\n", row, thread_data->thread_x[row]);
 
 			// check if estimates converge
 			double x = thread_data->thread_x[row] - thread_data->thread_xt[i];
 			thread_data->thread_error += x * x;
-			i++;
 		}
 
 		// sync x guesses, and get global error
 		double error = thread_data->thread_error;
 		double error_t;
+
+		// copy x into x_t
 		memcpy(thread_data->thread_xt + thread_data->thread_offset, thread_data->thread_x, thread_data->thread_rows * sizeof(double));
+
+		// for(int i = 0; i < thread_data->dim; i++) {
+		//	printf("old x[%i] = %f\n", i, thread_data->thread_xt[i]);
+		// }
+
 		for(int tid = 0; tid < thread_data->lim; tid++) {
 			ilib_status_t status;
 			if(tid != thread_data->tid) {
@@ -119,7 +135,6 @@ int iterate(data *thread_data) {
 				// broadcast error to everyone else
 				ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, tid, &(thread_data->thread_error), sizeof(double), &status);
 
-
 				// broadcast own x vector calculations
 				ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, tid, thread_data->thread_x, thread_data->thread_rows * sizeof(double), &status);
 			}
@@ -127,10 +142,12 @@ int iterate(data *thread_data) {
 
 		// test for convergence
 		if(error < EPSILON) {
-			break;
+			return(SUCCESS);
+		} else if(error == INFINITY) {
+			return(FAILURE);
 		}
 	}
-	return(0);
+	return(FAILURE);
 }
 
 /**

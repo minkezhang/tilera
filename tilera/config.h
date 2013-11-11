@@ -28,7 +28,11 @@
 // Defines a message ID for sending and receiving messages using MPI.
 #define MSG_HANDLE 0
 
-// The number of rows [ and columns ] in the input matrix; should be divisible by CORES
+// The number of rows [ and columns ] in the input matrix; should be divisible by CORES.
 #define DIM 10
+
+// Return codes for int-returned functions.
+#define SUCCESS 0
+#define FAILURE -1
 
 #endif
