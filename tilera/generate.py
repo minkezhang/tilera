@@ -48,7 +48,8 @@ def rand_int(bound):
 		val += 1 * dir
 	return(val)
 
-for i in xrange(10):
-	noise = i / 10.
-	dim = 16
-	main("pipe/sparse" + str(dim) + "_" + str(noise), dim, noise)
+for n in xrange(9):
+	for i in xrange(10):
+		noise = i / 10.
+		dim = pow(2, n)
+		main("pipe/data" + str(dim) + "_" + str(noise), dim, noise)

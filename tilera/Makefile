@@ -6,11 +6,13 @@ SOURCES=jacobi.c data.c file.c
 
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=jacobi
-OUT=out.txt
+OUT=check_out.txt
 PIPE=pipe
 CORES=10
 RUN=run.sh
 SAMPLE=sample
+RESULTS=results
+HEADER=data
 
 all: $(SOURCES) $(EXECUTABLE)
 
@@ -28,4 +30,4 @@ clean:
 	rm -f $(EXECUTABLE) $(OBJECTS)
 
 purge: clean
-	rm -f $(OUT)
+	rm -rf $(OUT) $(RESULTS)/* nohup.out $(PIPE)/$(HEADER)*

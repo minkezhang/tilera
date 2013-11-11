@@ -14,13 +14,10 @@
 #define MAX_ITERATIONS 10000
 
 // Maximum line buffer length.
-#define MAX_BUF 1024
+#define MAX_BUF 4096
 
 // Defines the convergence limit.
-#define EPSILON 0.001
-
-// Total number of cores to simulate.
-#define CORES 1
+#define EPSILON 0.0001
 
 // Defines the root node ID.
 #define ROOT 0
