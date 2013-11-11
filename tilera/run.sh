@@ -18,7 +18,7 @@ do
 				OUT=results/$FOLDER.txt
 				echo "running $DIM-sized array on $CORES cores and sparsity level $NOISE -- $FOLDER"
 				date
-				# { time tile-monitor --batch-mode --image tile64 --upload $EXECUTABLE $EXECUTABLE --upload $PIPE $PIPE --run - $EXECUTABLE $FOLDER $CORES - --download $PIPE $PIPE --download $PIPE $PIPE ; } >> $OUT 2>&1
+				{ time tile-monitor --batch-mode --image tile64 --upload $EXECUTABLE $EXECUTABLE --upload $PIPE $PIPE --run - $EXECUTABLE $FOLDER $CORES - --download $PIPE $PIPE --download $PIPE $PIPE ; } >> $OUT 2>&1
 			done
 		fi
 	done
