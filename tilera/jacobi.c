@@ -93,18 +93,12 @@ int iterate(data *thread_data) {
 			double upper = 0.0;
 			for(int j = 0; j < i; j++) {
 				lower += thread_data->thread_a[row][j] * thread_data->thread_xt[j];
-				// printf("lower (row = %i, j = %i) (= %f) * x[j = %i] (= %f) = %f\n", row, j, thread_data->thread_a[row][j], j, thread_data->thread_xt[j], thread_data->thread_a[row][j] * thread_data->thread_xt[j]);
-
-				
 			}
 			for(int j = i + 1; j < thread_data->dim; j++) {
 				upper += thread_data->thread_a[row][j] * thread_data->thread_xt[j];
-				// printf("upper (row = %i, j = %i) (= %f) * x[j = %i] (= %f) = %f\n", row, j, thread_data->thread_a[row][j], j, thread_data->thread_xt[j], thread_data->thread_a[row][j] * thread_data->thread_xt[j]);
 			}
 
 			thread_data->thread_x[row] = (thread_data->thread_b[row] - (lower + upper)) / thread_data->thread_a[row][i];
-
-			// printf("x[%i] = %f\n", row, thread_data->thread_x[row]);
 
 			// check if estimates converge
 			double x = thread_data->thread_x[row] - thread_data->thread_xt[i];
@@ -117,10 +111,6 @@ int iterate(data *thread_data) {
 
 		// copy x into x_t
 		memcpy(thread_data->thread_xt + thread_data->thread_offset, thread_data->thread_x, thread_data->thread_rows * sizeof(double));
-
-		// for(int i = 0; i < thread_data->dim; i++) {
-		//	printf("old x[%i] = %f\n", i, thread_data->thread_xt[i]);
-		// }
 
 		for(int tid = 0; tid < thread_data->lim; tid++) {
 			ilib_status_t status;
