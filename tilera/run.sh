@@ -12,7 +12,7 @@ do
 	do
 		if [[ CORES -le DIM ]]
 		then
-			for NOISE in 0.1 # 0.9
+			for NOISE in 0.1 0.9
 			do
 				FOLDER=$HEADER$CORES\_$NOISE
 				OUT=$RESULTS/$FOLDER.txt
