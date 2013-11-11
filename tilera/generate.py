@@ -1,6 +1,9 @@
 from random import random
 from math import ceil
 from os import path, mkdir
+from sys import argv
+
+# generate solvable matrices for the Jacobi method
 
 def main(folder, size, noise):
 	if(not path.exists(folder)):
@@ -48,8 +51,11 @@ def rand_int(bound):
 		val += 1 * dir
 	return(val)
 
-for n in xrange(9):
-	for i in xrange(10):
-		noise = i / 10.
-		dim = pow(2, n)
-		main("pipe/data" + str(dim) + "_" + str(noise), dim, noise)
+if(len(argv) != 4):
+	print("usage: " + str(argv[0]) + " [ dim ] [ noise ] [ header ]")
+
+else:
+	dim = int(argv[1])
+	noise = float(argv[2])
+	header = str(argv[3])
+	main("pipe/" + header + str(dim) + "_" + str(noise), dim, noise)

@@ -67,10 +67,12 @@ int main(int argc, char *argv[]) {
 		slave_initialize(thread_data);
 	}
 
-	int result = iterate(thread_data);
+	int steps;
+	int result = iterate(thread_data, &steps);
 
 	// return data
 	if(thread_data->tid == ROOT) {
+		fprintf(stderr, "finished iterating in %i / %i steps\n", steps + 1, MAX_ITERATIONS);
 		set_x(thread_data->thread_xt, thread_data->dim, pipe_x);
 		if(result == FAILURE) {
 			fprintf(stderr, "failed to converge\n");
@@ -83,7 +85,7 @@ int main(int argc, char *argv[]) {
 	return(result);
 }
 
-int iterate(data *thread_data) {
+int iterate(data *thread_data, int *iterations) {
 	for(int step = 0; step < MAX_ITERATIONS; step++) {
 		thread_data->thread_error = 0.0;
 		int i;
@@ -132,8 +134,10 @@ int iterate(data *thread_data) {
 
 		// test for convergence
 		if(error < EPSILON) {
+			*iterations = step;
 			return(SUCCESS);
 		} else if(error == INFINITY) {
+			*iterations = step;
 			return(FAILURE);
 		}
 	}

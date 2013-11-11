@@ -1,10 +1,9 @@
 #!/bin/bash
 
-EXECUTABLE=jacobi
-PIPE=pipe
-HEADER=data
-
-rm -rf $OUT
+EXECUTABLE=$1 # jacobi
+HEADER=$2 # data
+PIPE=$3 # pipe
+RESULTS=$4
 
 for DIM in 1 2 4 8 16 32 64 128 256
 do
@@ -12,14 +11,18 @@ do
 	do
 		if [[ CORES -le DIM ]]
 		then
-			for NOISE in 0.0 0.9
+			for NOISE in 0.1 0.9
 			do
-				FOLDER=sparse$CORES\_$NOISE
-				OUT=results/$FOLDER.txt
+				FOLDER=$HEADER$CORES\_$NOISE
+				OUT=$RESULTS/$FOLDER.txt
+				rm -rf $OUT
 				echo "running $DIM-sized array on $CORES cores and sparsity level $NOISE -- $FOLDER"
 				date
-				{ time tile-monitor --batch-mode --image tile64 --upload $EXECUTABLE $EXECUTABLE --upload $PIPE $PIPE --run - $EXECUTABLE $FOLDER $CORES - --download $PIPE $PIPE --download $PIPE $PIPE ; } >> $OUT 2>&1
+				echo ""
+				python generate.py $DIM $NOISE $HEADER
+				{ time tile-monitor --batch-mode --image tile64 --upload $EXECUTABLE $EXECUTABLE --upload $PIPE/$FOLDER $PIPE/$FOLDER --run - $EXECUTABLE $FOLDER $CORES - --download $PIPE/$FOLDER $PIPE/$FOLDER ; } >> $OUT 2>&1
 			done
 		fi
 	done
 done
+echo "simulations complete"

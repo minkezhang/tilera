@@ -11,7 +11,7 @@
 #define PHYS_BASE 0xc0000000
 
 // Define the maximum number of times in which the program attempts to converge the x-vector guess.
-#define MAX_ITERATIONS 10000
+#define MAX_ITERATIONS 100000
 
 // Maximum line buffer length.
 #define MAX_BUF 4096
