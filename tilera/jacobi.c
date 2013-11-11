@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
 
 		fprintf(stderr, "\nfolder %s, dim %i, cores %i\n", folder, dim, cores);
 	} else {
-		int dim = DIM;
+		int dim;
 		ilib_status_t status;
 		ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, ROOT, &dim, sizeof(dim), &status);
 
@@ -90,7 +90,7 @@ int iterate(data *thread_data) {
 			for(int j = 0; j < i; j++) {
 				lower += thread_data->thread_a[row][j] * thread_data->thread_xt[j];
 			}
-			for(int j = i + 1; j < DIM; j++) {
+			for(int j = i + 1; j < thread_data->dim; j++) {
 				upper += thread_data->thread_a[row][j] * thread_data->thread_xt[j];
 			}
 
@@ -139,14 +139,14 @@ int iterate(data *thread_data) {
 int mastr_initialize(data *thread_data, int lim, double **a, double *b, int dim) {
 	for(int tid = 1; tid < lim; tid++) {
 		for(int row = 0; row < thread_data->thread_rows; row++) {
-			ilib_msg_send(ILIB_GROUP_SIBLINGS, tid, MSG_HANDLE, a[tid * thread_data->thread_rows + row], DIM * sizeof(double));
+			ilib_msg_send(ILIB_GROUP_SIBLINGS, tid, MSG_HANDLE, a[tid * thread_data->thread_rows + row], dim * sizeof(double));
 		}
 		ilib_msg_send(ILIB_GROUP_SIBLINGS, tid, MSG_HANDLE + 1, b + tid * thread_data->thread_rows, thread_data->thread_rows * sizeof(double));
 	}
 
 	// ROOT data initialization doesn't need message passing.
 	for(int row = 0; row < thread_data->thread_rows; row++) {
-		memcpy(thread_data->thread_a[row], a[row], DIM * sizeof(double));
+		memcpy(thread_data->thread_a[row], a[row], dim * sizeof(double));
 	}
 	memcpy(thread_data->thread_b, b, thread_data->thread_rows * sizeof(double));
 
@@ -159,7 +159,7 @@ int mastr_initialize(data *thread_data, int lim, double **a, double *b, int dim)
 int slave_initialize(data *thread_data) {
 	ilib_status_t status;
 	for(int row = 0; row < thread_data->thread_rows; row++) {
-		ilib_msg_receive(ILIB_GROUP_SIBLINGS, ROOT, MSG_HANDLE, thread_data->thread_a[row], DIM * sizeof(double), &status);
+		ilib_msg_receive(ILIB_GROUP_SIBLINGS, ROOT, MSG_HANDLE, thread_data->thread_a[row], thread_data->dim * sizeof(double), &status);
 	}
 	ilib_msg_receive(ILIB_GROUP_SIBLINGS, ROOT, MSG_HANDLE + 1, thread_data->thread_b, thread_data->thread_rows * sizeof(double), &status);
 	return(0);

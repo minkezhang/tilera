@@ -2,8 +2,8 @@
 
 EXECUTABLE=jacobi
 PIPE=pipe
-OUT=results.txt
-FOLDER=sparse16_0.0
+FOLDER=sparse16_0.1
+OUT=results_$FOLDER.txt
 
 rm -rf $OUT
 
