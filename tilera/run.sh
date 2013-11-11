@@ -6,13 +6,13 @@ PIPE=$3
 RESULTS=$4
 EMAIL=minke.zhang@gmail.com
 
-for DIM in 1 # 2 4 8 16 32 64 128 256
+for DIM in 512 1024 # 1 2 4 8 16 32 64 128 256
 do
-	for NOISE in 0.1 # 0.9
+	for NOISE in 0.1 0.9
 	do
 		FOLDER=$HEADER$DIM\_$NOISE
 		python generate.py $DIM $NOISE $HEADER
-		for CORES in 1 # 2 4 8 16 32 64
+		for CORES in 1 2 4 8 16 32 64
 		do
 			if [[ CORES -le DIM ]]
 			then
@@ -25,6 +25,6 @@ do
 			fi
 		done
 	done
-	# echo "finished n = $DIM" | mail -s "simulation update ($DIM complete)" $EMAIL
+	echo "finished n = $DIM" | mail -s "simulation update ($DIM complete)" $EMAIL
 done
 echo "simulations complete"
