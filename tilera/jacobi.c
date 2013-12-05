@@ -77,8 +77,6 @@ int main(int argc, char *argv[]) {
 		slave_initialize(thread_data);
 	}
 
-	data_vomit(thread_data);
-
 	int steps;
 	int result = iterate(thread_data, &steps);
 
@@ -200,19 +198,11 @@ int mastr_initialize(data *thread_data, int lim, double **a, double *b, int dim)
 		// if MODE == DMA, copy arrays into main root node, and set offset pointers to other nodes
 		//	note that this means the nodes are NOT identical - root node **a is set at a[0][0], other nodes
 		//	are offset at a[offset][0]
+		address *instance = create_address_instance(thread_data->error_lock, thread_data->global_error, thread_data->thread_a, thread_data->thread_b, thread_data->thread_x, thread_data->thread_xt);
 		for(int tid = 1; tid < lim; tid++) {
-			// set offset pointer to the n x n matrix and output vector
-			double **offset_a = thread_data->thread_a + tid * thread_data->thread_rows;
-			double *offset_b = thread_data->thread_b + tid * thread_data->thread_rows;
-			double *offset_x = thread_data->thread_x + tid * thread_data->thread_rows;
-			ilib_msg_send(ILIB_GROUP_SIBLINGS, tid, MSG_HANDLE, &offset_a, sizeof(double **));
-			ilib_msg_send(ILIB_GROUP_SIBLINGS, tid, MSG_HANDLE + 1, &offset_b, sizeof(double *));
-			ilib_msg_send(ILIB_GROUP_SIBLINGS, tid, MSG_HANDLE + 4, &offset_x, sizeof(double *));
-
-			// thread_error must be global
-			ilib_msg_send(ILIB_GROUP_SIBLINGS, tid, MSG_HANDLE + 2, &thread_data->global_error, sizeof(double));
-			ilib_msg_send(ILIB_GROUP_SIBLINGS, tid, MSG_HANDLE + 3, &thread_data->error_lock, sizeof(ilib_mutex_t));
+			ilib_msg_send(ILIB_GROUP_SIBLINGS, tid, MSG_HANDLE, &instance, sizeof(address *));
 		}
+
 		// set the memory contents
 		for(int row = 0; row < dim; row++) {
 			memcpy(thread_data->thread_a[row], a[row], dim * sizeof(double));
@@ -233,27 +223,16 @@ int slave_initialize(data *thread_data) {
 		}
 		ilib_msg_receive(ILIB_GROUP_SIBLINGS, ROOT, MSG_HANDLE + 1, thread_data->thread_b, thread_data->thread_rows * sizeof(double), &status);
 	} else {
-		// set the offset to the shared memory
-		double **offset_a;
-		double *offset_b;
-		double *offset_x;
-		ilib_msg_receive(ILIB_GROUP_SIBLINGS, ROOT, MSG_HANDLE, &offset_a, sizeof(double **), &status);
-		ilib_msg_receive(ILIB_GROUP_SIBLINGS, ROOT, MSG_HANDLE + 1, &offset_b, sizeof(double *), &status);
-		ilib_msg_receive(ILIB_GROUP_SIBLINGS, ROOT, MSG_HANDLE + 4, &offset_x, sizeof(double *), &status);
+		address *instance;
+		ilib_msg_receive(ILIB_GROUP_SIBLINGS, ROOT, MSG_HANDLE, &instance, sizeof(address *), &status);
 
-		double *error;
-		ilib_msg_receive(ILIB_GROUP_SIBLINGS, ROOT, MSG_HANDLE + 2, &error, sizeof(double), &status);
+		thread_data->thread_a = instance->a + thread_data->tid * thread_data->thread_rows;
+		thread_data->thread_b = instance->b + thread_data->tid * thread_data->thread_rows;
+		thread_data->thread_x = instance->x + thread_data->tid * thread_data->thread_rows;
+		thread_data->thread_xt = instance->xt;
+		thread_data->error_lock = instance->error_lock;
+		thread_data->global_error = instance->global_error;
 
-		ilib_mutex_t *lock;
-		ilib_msg_receive(ILIB_GROUP_SIBLINGS, ROOT, MSG_HANDLE + 3, &lock, sizeof(ilib_mutex_t), &status);
-
-		thread_data->thread_a = offset_a;
-		thread_data->thread_b = offset_b;
-		thread_data->thread_x = offset_x;
-		// DEBUG - fix dis not a constant
-		thread_data->thread_xt = (double *) 0x41020690; // offset_b - thread_data->tid * thread_data->thread_rows; // - thread_data->thread_offset;
-		thread_data->global_error = error;
-		thread_data->error_lock = lock;
 	}
 	return(0);
 }

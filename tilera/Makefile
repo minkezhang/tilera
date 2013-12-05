@@ -8,7 +8,7 @@ OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=jacobi
 OUT=check_out.txt
 PIPE=pipe
-CORES=2
+CORES=5
 RUN=run.sh
 SAMPLE=sample
 RESULTS=results
