@@ -20,13 +20,15 @@ do
 		do
 			if [[ CORES -le DIM ]]
 			then
-				OUT=$RESULTS/$DIM\_$CORES\_$NOISE.txt
-				rm -rf $OUT
-				echo "running n = $DIM on $CORES cores with noise = $NOISE -- $FOLDER"
-				date
-				echo ""
-				{ time tile-monitor --batch-mode --image tile64 --upload $EXECUTABLE $EXECUTABLE --upload $PIPE/$FOLDER $PIPE/$FOLDER --run - $EXECUTABLE $FOLDER $CORES $MPI - --download $PIPE/$FOLDER $PIPE/$FOLDER ; } >> $OUT 2>&1
-				{ time tile-monitor --batch-mode --image tile64 --upload $EXECUTABLE $EXECUTABLE --upload $PIPE/$FOLDER $PIPE/$FOLDER --run - $EXECUTABLE $FOLDER $CORES $DMA - --download $PIPE/$FOLDER $PIPE/$FOLDER ; } >> $OUT 2>&1
+				for MODE in 0 1
+				do
+					OUT=$RESULTS/$DIM\_$CORES\_$NOISE.txt
+					rm -rf $OUT
+					echo "running n = $DIM on $CORES cores with noise = $NOISE and mode = $MODE -- $FOLDER"
+					date
+					echo ""
+					{ time tile-monitor --batch-mode --image tile64 --upload $EXECUTABLE $EXECUTABLE --upload $PIPE/$FOLDER $PIPE/$FOLDER --run - $EXECUTABLE $FOLDER $CORES $MODE - --download $PIPE/$FOLDER $PIPE/$FOLDER ; } >> $OUT 2>&1
+				done
 			fi
 		done
 	done
