@@ -6,6 +6,10 @@ PIPE=$3
 RESULTS=$4
 EMAIL=minke.zhang@gmail.com
 
+# protocol modes
+MPI=0
+DMA=1
+
 for DIM in 512 1024 # 1 2 4 8 16 32 64 128 256
 do
 	for NOISE in 0.1 0.9
@@ -21,7 +25,8 @@ do
 				echo "running n = $DIM on $CORES cores with noise = $NOISE -- $FOLDER"
 				date
 				echo ""
-				{ time tile-monitor --batch-mode --image tile64 --upload $EXECUTABLE $EXECUTABLE --upload $PIPE/$FOLDER $PIPE/$FOLDER --run - $EXECUTABLE $FOLDER $CORES - --download $PIPE/$FOLDER $PIPE/$FOLDER ; } >> $OUT 2>&1
+				{ time tile-monitor --batch-mode --image tile64 --upload $EXECUTABLE $EXECUTABLE --upload $PIPE/$FOLDER $PIPE/$FOLDER --run - $EXECUTABLE $FOLDER $CORES $MPI - --download $PIPE/$FOLDER $PIPE/$FOLDER ; } >> $OUT 2>&1
+				{ time tile-monitor --batch-mode --image tile64 --upload $EXECUTABLE $EXECUTABLE --upload $PIPE/$FOLDER $PIPE/$FOLDER --run - $EXECUTABLE $FOLDER $CORES $DMA - --download $PIPE/$FOLDER $PIPE/$FOLDER ; } >> $OUT 2>&1
 			fi
 		done
 	done

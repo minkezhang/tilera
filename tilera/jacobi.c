@@ -97,7 +97,6 @@ int main(int argc, char *argv[]) {
 
 int iterate(data *thread_data, int *iterations, int mode) {
 	for(int step = 0; step < MAX_ITERATIONS; step++) {
-		printf("debug - jacobi.c, iterate(): stepping through step %i on tid %i\n", step, thread_data->tid);
 		if(mode == MPI) {
 			thread_data->thread_error = 0.0;
 		} else {
