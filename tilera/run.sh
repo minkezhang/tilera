@@ -12,6 +12,7 @@ do
 	do
 		FOLDER=$HEADER$DIM\_$NOISE
 		echo "python generate.py $DIM $NOISE $HEADER"
+		echo ""
 		python generate.py $DIM $NOISE $HEADER
 		for CORES in 1 2 4 8 16 32 64
 		do
