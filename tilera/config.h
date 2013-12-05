@@ -36,6 +36,6 @@
 #define MPI 0
 #define DMA 1
 
-#define MODE 1
+#define MODE 0
 
 #endif

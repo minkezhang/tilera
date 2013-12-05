@@ -62,7 +62,6 @@ void data_allocate(data *thread, int mode) {
 void data_dim(data *thread, int dim, int mode) {
 	thread->dim = dim;
 
-	printf("dim = %i, t->dim / t->lim = %i / %i = %i\n", dim, thread->dim, thread->lim, (int) floor(thread->dim / thread->lim));
 	thread->thread_rows = (int) floor(thread->dim / thread->lim);
 	thread->thread_offset = thread->tid * thread->thread_rows;
 
@@ -77,11 +76,9 @@ thread vomit for %i
 	thread_lim	%i
 	thread_offset	%i
 	thread_error	%.2f
-	thread_xt	0x%08x\n" \
-	// thread_a	0x%08x
-	// thread_b	0x%08x
-	// thread_x	0x%08x\n", thread->tid, thread->thread_rows, thread->lim, thread->thread_offset, thread->thread_error, thread->thread_xt, thread->thread_a, thread->thread_b, thread->thread_x);
-	, thread->tid, thread->thread_rows, thread->lim, thread->thread_offset, thread->thread_error, thread->thread_xt);
+	thread_a	0x%08x
+	thread_b	0x%08x
+	thread_x	0x%08x\n", thread->tid, thread->thread_rows, thread->lim, thread->thread_offset, thread->thread_error, thread->thread_a, thread->thread_b, thread->thread_x);
 
 	for(int row = 0; row < thread->thread_rows; row++) {
 		printf("%i) b[%i] = %f\n", thread->tid, row, thread->thread_b[row]);

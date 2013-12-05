@@ -17,8 +17,8 @@ typedef struct address_t {
 
 
 address * create_address_instance(ilib_mutex_t *, double *, double **, double *, double *, double *);
-int mastr_initialize(data *, int, double **, double *, int);
-int slave_initialize(data *);
-int iterate(data *, int *);
+int mastr_initialize(data *, int, double **, double *, int, int);
+int slave_initialize(data *, int);
+int iterate(data *, int *, int);
 
 #endif

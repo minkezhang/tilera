@@ -9,7 +9,7 @@
 #include "file.h"
 #include "jacobi.h"
 
-/* Minimize the use of message passing in the MODE == DMA case. */
+/* Minimize the use of message passing in the mode == DMA case. */
 address * create_address_instance(ilib_mutex_t *error_lock, double *global_error, double **a, double *b, double *x, double *xt) {
 	address *instance = tmc_cmem_malloc(sizeof(address));
 	instance->error_lock = error_lock;
@@ -24,13 +24,15 @@ address * create_address_instance(ilib_mutex_t *error_lock, double *global_error
 int main(int argc, char *argv[]) {
 	char *folder = (char *) calloc(MAX_BUF, sizeof(char));
 	int cores;
-	if(argc == 3) {
+	int mode;
+	if(argc == 4) {
 		sscanf(argv[1], "%s", folder);
 		sscanf(argv[2], "%i", &cores);
+		sscanf(argv[3], "%i", &mode);
 	} else {
 		char *cmd = calloc(MAX_BUF, sizeof(char));
 		sscanf(argv[0], "/%s", cmd);
-		fprintf(stderr, "usage: %s [ folder ] [ cores ]\n", cmd);
+		fprintf(stderr, "usage: %s [ folder ] [ cores ] [ mode ]\n", cmd);
 		return(0);
 	}
 
@@ -40,7 +42,7 @@ int main(int argc, char *argv[]) {
 
 	sprintf(pipe_a, "pipe/%s/a.txt", folder);
 	sprintf(pipe_b, "pipe/%s/b.txt", folder);
-	sprintf(pipe_x, "pipe/%s/x_%i.txt", folder, cores);
+	sprintf(pipe_x, "pipe/%s/x_%s_%i.txt", folder, (mode == MPI) ? "mpi" : "dma", cores);
 
 	ilib_init();
 
@@ -64,21 +66,21 @@ int main(int argc, char *argv[]) {
 		ilib_status_t status;
 		ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, ROOT, &dim, sizeof(dim), &status);
 
-		data_dim(thread_data, dim, MODE);
-		mastr_initialize(thread_data, lim, a, b, dim);
+		data_dim(thread_data, dim, mode);
+		mastr_initialize(thread_data, lim, a, b, dim, mode);
 
-		fprintf(stderr, "\nfolder %s, dim %i, cores %i\n", folder, dim, cores);
+		fprintf(stderr, "\nfolder %s, dim %i, cores %i, protocol %s\n", folder, dim, cores, (mode == MPI) ? "mpi" : "dma");
 	} else {
 		int dim;
 		ilib_status_t status;
 		ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, ROOT, &dim, sizeof(dim), &status);
 
-		data_dim(thread_data, dim, MODE);
-		slave_initialize(thread_data);
+		data_dim(thread_data, dim, mode);
+		slave_initialize(thread_data, mode);
 	}
 
 	int steps;
-	int result = iterate(thread_data, &steps);
+	int result = iterate(thread_data, &steps, mode);
 
 	// return data
 	if(thread_data->tid == ROOT) {
@@ -93,9 +95,10 @@ int main(int argc, char *argv[]) {
 	return(result);
 }
 
-int iterate(data *thread_data, int *iterations) {
+int iterate(data *thread_data, int *iterations, int mode) {
 	for(int step = 0; step < MAX_ITERATIONS; step++) {
-		if(MODE == MPI) {
+		printf("debug - jacobi.c, iterate(): stepping through step %i on tid %i\n", step, thread_data->tid);
+		if(mode == MPI) {
 			thread_data->thread_error = 0.0;
 		} else {
 			if(thread_data->tid == ROOT) {
@@ -121,7 +124,7 @@ int iterate(data *thread_data, int *iterations) {
 
 			// check if estimates converge
 			double x = thread_data->thread_x[row] - thread_data->thread_xt[i];
-			if(MODE == MPI) {
+			if(mode == MPI) {
 				thread_data->thread_error += x * x;
 			} else {
 				ilib_mutex_lock(thread_data->error_lock);
@@ -133,7 +136,7 @@ int iterate(data *thread_data, int *iterations) {
 		// sync x guesses, and get global error
 		double error;
 		double error_t;
-		if(MODE == MPI) {
+		if(mode == MPI) {
 			error = thread_data->thread_error;
 		} else {
 			error = *(thread_data->global_error);
@@ -144,7 +147,7 @@ int iterate(data *thread_data, int *iterations) {
 		// copy x into x_t
 		memcpy(thread_data->thread_xt + thread_data->thread_offset, thread_data->thread_x, thread_data->thread_rows * sizeof(double));
 
-		if(MODE == MPI) {
+		if(mode == MPI) {
 			for(int tid = 0; tid < thread_data->lim; tid++) {
 				ilib_status_t status;
 				if(tid != thread_data->tid) {
@@ -179,8 +182,8 @@ int iterate(data *thread_data, int *iterations) {
 /**
  * Pass initial data to the other nodes.
  */
-int mastr_initialize(data *thread_data, int lim, double **a, double *b, int dim) {
-	if(MODE == MPI) {
+int mastr_initialize(data *thread_data, int lim, double **a, double *b, int dim, int mode) {
+	if(mode == MPI) {
 		// pass along a and b vectors
 		for(int tid = 1; tid < lim; tid++) {
 			for(int row = 0; row < thread_data->thread_rows; row++) {
@@ -195,7 +198,7 @@ int mastr_initialize(data *thread_data, int lim, double **a, double *b, int dim)
 		}
 		memcpy(thread_data->thread_b, b, thread_data->thread_rows * sizeof(double));
 	} else {
-		// if MODE == DMA, copy arrays into main root node, and set offset pointers to other nodes
+		// if mode == DMA, copy arrays into main root node, and set offset pointers to other nodes
 		//	note that this means the nodes are NOT identical - root node **a is set at a[0][0], other nodes
 		//	are offset at a[offset][0]
 		address *instance = create_address_instance(thread_data->error_lock, thread_data->global_error, thread_data->thread_a, thread_data->thread_b, thread_data->thread_x, thread_data->thread_xt);
@@ -215,9 +218,9 @@ int mastr_initialize(data *thread_data, int lim, double **a, double *b, int dim)
 /**
  * Prep data for processing.
  */
-int slave_initialize(data *thread_data) {
+int slave_initialize(data *thread_data, int mode) {
 	ilib_status_t status;
-	if(MODE == MPI) {
+	if(mode == MPI) {
 		for(int row = 0; row < thread_data->thread_rows; row++) {
 			ilib_msg_receive(ILIB_GROUP_SIBLINGS, ROOT, MSG_HANDLE, thread_data->thread_a[row], thread_data->dim * sizeof(double), &status);
 		}
