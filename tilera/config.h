@@ -32,4 +32,10 @@
 #define SUCCESS 0
 #define FAILURE -1
 
+// defines data communications protocol
+#define MPI 0
+#define DMA 1
+
+#define MODE 1
+
 #endif

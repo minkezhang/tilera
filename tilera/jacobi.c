@@ -11,6 +11,16 @@
 
 typedef ilibStatus ilib_status_t;
 
+// keep track of misellanous address spaces
+typedef struct address_t {
+	double **a;
+	double *b;
+	double *x;
+	double *xt;
+        ilib_mutex_t *error_lock;
+        double *global_error;
+} address;
+
 int main(int argc, char *argv[]) {
 	char *folder = (char *) calloc(MAX_BUF, sizeof(char));
 	int cores;
@@ -54,7 +64,7 @@ int main(int argc, char *argv[]) {
 		ilib_status_t status;
 		ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, ROOT, &dim, sizeof(dim), &status);
 
-		data_dim(thread_data, dim);
+		data_dim(thread_data, dim, MODE);
 		mastr_initialize(thread_data, lim, a, b, dim);
 
 		fprintf(stderr, "\nfolder %s, dim %i, cores %i\n", folder, dim, cores);
@@ -63,9 +73,11 @@ int main(int argc, char *argv[]) {
 		ilib_status_t status;
 		ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, ROOT, &dim, sizeof(dim), &status);
 
-		data_dim(thread_data, dim);
+		data_dim(thread_data, dim, MODE);
 		slave_initialize(thread_data);
 	}
+
+	data_vomit(thread_data);
 
 	int steps;
 	int result = iterate(thread_data, &steps);
@@ -79,15 +91,22 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	ilib_msg_barrier(ILIB_GROUP_SIBLINGS);
-
 	ilib_finish();
 	return(result);
 }
 
 int iterate(data *thread_data, int *iterations) {
 	for(int step = 0; step < MAX_ITERATIONS; step++) {
-		thread_data->thread_error = 0.0;
+		if(MODE == MPI) {
+			thread_data->thread_error = 0.0;
+		} else {
+			if(thread_data->tid == ROOT) {
+				*(thread_data->global_error) = 0.0;
+			}
+
+			// ensure global_error is reset before proceeding
+			ilib_msg_barrier(ILIB_GROUP_SIBLINGS);
+		}
 		int i;
 		for(int row = 0; row < thread_data->thread_rows; row++) {		// i
 			i = thread_data->thread_offset + row;				// global_i
@@ -104,31 +123,46 @@ int iterate(data *thread_data, int *iterations) {
 
 			// check if estimates converge
 			double x = thread_data->thread_x[row] - thread_data->thread_xt[i];
-			thread_data->thread_error += x * x;
+			if(MODE == MPI) {
+				thread_data->thread_error += x * x;
+			} else {
+				ilib_mutex_lock(thread_data->error_lock);
+				*(thread_data->global_error) += x * x;
+				ilib_mutex_unlock(thread_data->error_lock);
+			}
 		}
 
 		// sync x guesses, and get global error
-		double error = thread_data->thread_error;
+		double error;
 		double error_t;
+		if(MODE == MPI) {
+			error = thread_data->thread_error;
+		} else {
+			error = *(thread_data->global_error);
+		}
+
+		// sync data among threads
 
 		// copy x into x_t
 		memcpy(thread_data->thread_xt + thread_data->thread_offset, thread_data->thread_x, thread_data->thread_rows * sizeof(double));
 
-		for(int tid = 0; tid < thread_data->lim; tid++) {
-			ilib_status_t status;
-			if(tid != thread_data->tid) {
-				// receive error from everyone
-				ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, tid, &error_t, sizeof(double), &status);
-				error += error_t;
+		if(MODE == MPI) {
+			for(int tid = 0; tid < thread_data->lim; tid++) {
+				ilib_status_t status;
+				if(tid != thread_data->tid) {
+					// receive error from everyone
+					ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, tid, &error_t, sizeof(double), &status);
+					error += error_t;
 
-				// receive iterative x vector
-				ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, tid, thread_data->thread_xt + (tid * thread_data->thread_rows), thread_data->thread_rows * sizeof(double), &status);
-			} else {
-				// broadcast error to everyone else
-				ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, tid, &(thread_data->thread_error), sizeof(double), &status);
+					// receive iterative x vector
+					ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, tid, thread_data->thread_xt + (tid * thread_data->thread_rows), thread_data->thread_rows * sizeof(double), &status);
+				} else {
+					// broadcast error to everyone else
+					ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, tid, &(thread_data->thread_error), sizeof(double), &status);
 
-				// broadcast own x vector calculations
-				ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, tid, thread_data->thread_x, thread_data->thread_rows * sizeof(double), &status);
+					// broadcast own x vector calculations
+					ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, tid, thread_data->thread_x, thread_data->thread_rows * sizeof(double), &status);
+				}
 			}
 		}
 
@@ -148,19 +182,43 @@ int iterate(data *thread_data, int *iterations) {
  * Pass initial data to the other nodes.
  */
 int mastr_initialize(data *thread_data, int lim, double **a, double *b, int dim) {
-	for(int tid = 1; tid < lim; tid++) {
-		for(int row = 0; row < thread_data->thread_rows; row++) {
-			ilib_msg_send(ILIB_GROUP_SIBLINGS, tid, MSG_HANDLE, a[tid * thread_data->thread_rows + row], dim * sizeof(double));
+	if(MODE == MPI) {
+		// pass along a and b vectors
+		for(int tid = 1; tid < lim; tid++) {
+			for(int row = 0; row < thread_data->thread_rows; row++) {
+				ilib_msg_send(ILIB_GROUP_SIBLINGS, tid, MSG_HANDLE, a[tid * thread_data->thread_rows + row], dim * sizeof(double));
+			}
+			ilib_msg_send(ILIB_GROUP_SIBLINGS, tid, MSG_HANDLE + 1, b + tid * thread_data->thread_rows, thread_data->thread_rows * sizeof(double));
 		}
-		ilib_msg_send(ILIB_GROUP_SIBLINGS, tid, MSG_HANDLE + 1, b + tid * thread_data->thread_rows, thread_data->thread_rows * sizeof(double));
-	}
 
-	// ROOT data initialization doesn't need message passing.
-	for(int row = 0; row < thread_data->thread_rows; row++) {
-		memcpy(thread_data->thread_a[row], a[row], dim * sizeof(double));
-	}
-	memcpy(thread_data->thread_b, b, thread_data->thread_rows * sizeof(double));
+		// ROOT data initialization doesn't need message passing.
+		for(int row = 0; row < thread_data->thread_rows; row++) {
+			memcpy(thread_data->thread_a[row], a[row], dim * sizeof(double));
+		}
+		memcpy(thread_data->thread_b, b, thread_data->thread_rows * sizeof(double));
+	} else {
+		// if MODE == DMA, copy arrays into main root node, and set offset pointers to other nodes
+		//	note that this means the nodes are NOT identical - root node **a is set at a[0][0], other nodes
+		//	are offset at a[offset][0]
+		for(int tid = 1; tid < lim; tid++) {
+			// set offset pointer to the n x n matrix and output vector
+			double **offset_a = thread_data->thread_a + tid * thread_data->thread_rows;
+			double *offset_b = thread_data->thread_b + tid * thread_data->thread_rows;
+			double *offset_x = thread_data->thread_x + tid * thread_data->thread_rows;
+			ilib_msg_send(ILIB_GROUP_SIBLINGS, tid, MSG_HANDLE, &offset_a, sizeof(double **));
+			ilib_msg_send(ILIB_GROUP_SIBLINGS, tid, MSG_HANDLE + 1, &offset_b, sizeof(double *));
+			ilib_msg_send(ILIB_GROUP_SIBLINGS, tid, MSG_HANDLE + 4, &offset_x, sizeof(double *));
 
+			// thread_error must be global
+			ilib_msg_send(ILIB_GROUP_SIBLINGS, tid, MSG_HANDLE + 2, &thread_data->global_error, sizeof(double));
+			ilib_msg_send(ILIB_GROUP_SIBLINGS, tid, MSG_HANDLE + 3, &thread_data->error_lock, sizeof(ilib_mutex_t));
+		}
+		// set the memory contents
+		for(int row = 0; row < dim; row++) {
+			memcpy(thread_data->thread_a[row], a[row], dim * sizeof(double));
+		}
+		memcpy(thread_data->thread_b, b, dim * sizeof(double));
+	}
 	return(0);
 }
 
@@ -169,9 +227,33 @@ int mastr_initialize(data *thread_data, int lim, double **a, double *b, int dim)
  */
 int slave_initialize(data *thread_data) {
 	ilib_status_t status;
-	for(int row = 0; row < thread_data->thread_rows; row++) {
-		ilib_msg_receive(ILIB_GROUP_SIBLINGS, ROOT, MSG_HANDLE, thread_data->thread_a[row], thread_data->dim * sizeof(double), &status);
+	if(MODE == MPI) {
+		for(int row = 0; row < thread_data->thread_rows; row++) {
+			ilib_msg_receive(ILIB_GROUP_SIBLINGS, ROOT, MSG_HANDLE, thread_data->thread_a[row], thread_data->dim * sizeof(double), &status);
+		}
+		ilib_msg_receive(ILIB_GROUP_SIBLINGS, ROOT, MSG_HANDLE + 1, thread_data->thread_b, thread_data->thread_rows * sizeof(double), &status);
+	} else {
+		// set the offset to the shared memory
+		double **offset_a;
+		double *offset_b;
+		double *offset_x;
+		ilib_msg_receive(ILIB_GROUP_SIBLINGS, ROOT, MSG_HANDLE, &offset_a, sizeof(double **), &status);
+		ilib_msg_receive(ILIB_GROUP_SIBLINGS, ROOT, MSG_HANDLE + 1, &offset_b, sizeof(double *), &status);
+		ilib_msg_receive(ILIB_GROUP_SIBLINGS, ROOT, MSG_HANDLE + 4, &offset_x, sizeof(double *), &status);
+
+		double *error;
+		ilib_msg_receive(ILIB_GROUP_SIBLINGS, ROOT, MSG_HANDLE + 2, &error, sizeof(double), &status);
+
+		ilib_mutex_t *lock;
+		ilib_msg_receive(ILIB_GROUP_SIBLINGS, ROOT, MSG_HANDLE + 3, &lock, sizeof(ilib_mutex_t), &status);
+
+		thread_data->thread_a = offset_a;
+		thread_data->thread_b = offset_b;
+		thread_data->thread_x = offset_x;
+		// DEBUG - fix dis not a constant
+		thread_data->thread_xt = (double *) 0x41020690; // offset_b - thread_data->tid * thread_data->thread_rows; // - thread_data->thread_offset;
+		thread_data->global_error = error;
+		thread_data->error_lock = lock;
 	}
-	ilib_msg_receive(ILIB_GROUP_SIBLINGS, ROOT, MSG_HANDLE + 1, thread_data->thread_b, thread_data->thread_rows * sizeof(double), &status);
 	return(0);
 }
