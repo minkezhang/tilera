@@ -9,17 +9,17 @@
 #include "file.h"
 #include "jacobi.h"
 
-typedef ilibStatus ilib_status_t;
-
-// keep track of misellanous address spaces
-typedef struct address_t {
-	double **a;
-	double *b;
-	double *x;
-	double *xt;
-        ilib_mutex_t *error_lock;
-        double *global_error;
-} address;
+/* Minimize the use of message passing in the MODE == DMA case. */
+address * create_address_instance(ilib_mutex_t *error_lock, double *global_error, double **a, double *b, double *x, double *xt) {
+	address *instance = tmc_cmem_malloc(sizeof(address));
+	instance->error_lock = error_lock;
+	instance->global_error = global_error;
+	instance->a = a;
+	instance->b = b;
+	instance->x = x;
+	instance->xt = xt;
+	return(instance);	
+}
 
 int main(int argc, char *argv[]) {
 	char *folder = (char *) calloc(MAX_BUF, sizeof(char));
