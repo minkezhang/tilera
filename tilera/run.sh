@@ -6,11 +6,7 @@ PIPE=$3
 RESULTS=$4
 EMAIL=minke.zhang@gmail.com
 
-# protocol modes
-MPI=0
-DMA=1
-
-for DIM in 512 1024 # 1 2 4 8 16 32 64 128 256
+for DIM in 1 2 4 8 16 32 64 128 256 512 1024
 do
 	for NOISE in 0.1 0.9
 	do
