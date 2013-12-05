@@ -18,9 +18,14 @@ do
 			then
 				for MODE in 0 1
 				do
-					OUT=$RESULTS/$DIM\_$CORES\_$NOISE.txt
+					case "$MODE" in
+					 0) MODESTR=mpi ;;
+					 1) MODESTR=dma ;;
+					esac
+
+					OUT=$RESULTS/$DIM\_$CORES\_$MODESTR\_$NOISE.txt
 					rm -rf $OUT
-					echo "running n = $DIM on $CORES cores with noise = $NOISE and mode = $MODE -- $FOLDER"
+					echo "running n = $DIM on $CORES cores with noise = $NOISE and mode = $MODE -- $FOLDER, $OUT"
 					date
 					echo ""
 					{ time tile-monitor --batch-mode --image tile64 --upload $EXECUTABLE $EXECUTABLE --upload $PIPE/$FOLDER $PIPE/$FOLDER --run - $EXECUTABLE $FOLDER $CORES $MODE - --download $PIPE/$FOLDER $PIPE/$FOLDER ; } >> $OUT 2>&1
