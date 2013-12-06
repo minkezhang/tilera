@@ -57,15 +57,8 @@ int main(int argc, char *argv[]) {
 	thread_data->tid = tid;
 	thread_data->lim = lim;
 
-	int *cur_step;
-
 	if(thread_data->tid == ROOT) {
 		ilib_status_t status;
-		if(mode == DMA) {
-			cur_step = (int *) tmc_cmem_malloc(sizeof(int));
-			*cur_step = -1;
-			ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, ROOT, &cur_step, sizeof(int), &status);
-		}
 
 		int dim = DIM;
 		double *b = get_b(pipe_b, &dim);
@@ -80,9 +73,6 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "\nfolder %s, dim %i, cores %i, protocol %s\n", folder, dim, cores, (mode == MPI) ? "mpi" : "dma");
 	} else {
 		ilib_status_t status;
-		if(mode == DMA) {
-			ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, ROOT, &cur_step, sizeof(int), &status);
-		}
 
 		int dim;
 		ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, ROOT, &dim, sizeof(dim), &status);
@@ -92,7 +82,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	int steps;
-	int result = iterate(thread_data, &steps, mode, cur_step);
+	int result = iterate(thread_data, &steps, mode);
 
 	// return data
 	if(thread_data->tid == ROOT) {
@@ -107,20 +97,16 @@ int main(int argc, char *argv[]) {
 	return(result);
 }
 
-int iterate(data *thread_data, int *iterations, int mode, int *cur_step) {
+int iterate(data *thread_data, int *iterations, int mode) {
 	for(int step = 0; step < MAX_ITERATIONS; step++) {
 		if(mode == MPI) {
 			thread_data->thread_error = 0.0;
 		} else {
 			if(thread_data->tid == ROOT) {
 				*(thread_data->global_error) = 0.0;
-				*cur_step = step;
 			}
 			// ensure global_error is reset before proceeding
-			while(*cur_step != step) {
-				printf("");
-			}
-			// int barrier_result = ilib_msg_barrier(ILIB_GROUP_SIBLINGS);
+			ilib_msg_barrier(ILIB_GROUP_SIBLINGS);
 		}
 
 		int i;
@@ -147,6 +133,8 @@ int iterate(data *thread_data, int *iterations, int mode, int *cur_step) {
 				ilib_mutex_unlock(thread_data->error_lock);
 			}
 		}
+
+		ilib_msg_barrier(ILIB_GROUP_SIBLINGS);
 
 		// sync x guesses, and get global error
 		double error;
@@ -181,6 +169,8 @@ int iterate(data *thread_data, int *iterations, int mode, int *cur_step) {
 				}
 			}
 		}
+
+		ilib_msg_barrier(ILIB_GROUP_SIBLINGS);
 
 		// test for convergence
 		if(error < EPSILON) {
