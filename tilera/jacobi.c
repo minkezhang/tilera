@@ -57,13 +57,21 @@ int main(int argc, char *argv[]) {
 	thread_data->tid = tid;
 	thread_data->lim = lim;
 
+	int *cur_step;
+
 	if(thread_data->tid == ROOT) {
+		ilib_status_t status;
+		if(mode == DMA) {
+			cur_step = (int *) tmc_cmem_malloc(sizeof(int));
+			*cur_step = -1;
+			ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, ROOT, &cur_step, sizeof(int), &status);
+		}
+
 		int dim = DIM;
 		double *b = get_b(pipe_b, &dim);
 		double **a = get_a(pipe_a, dim);
 		double *x = (double *) calloc(dim, sizeof(double));
 	
-		ilib_status_t status;
 		ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, ROOT, &dim, sizeof(dim), &status);
 
 		data_dim(thread_data, dim, mode);
@@ -71,8 +79,12 @@ int main(int argc, char *argv[]) {
 
 		fprintf(stderr, "\nfolder %s, dim %i, cores %i, protocol %s\n", folder, dim, cores, (mode == MPI) ? "mpi" : "dma");
 	} else {
-		int dim;
 		ilib_status_t status;
+		if(mode == DMA) {
+			ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, ROOT, &cur_step, sizeof(int), &status);
+		}
+
+		int dim;
 		ilib_msg_broadcast(ILIB_GROUP_SIBLINGS, ROOT, &dim, sizeof(dim), &status);
 
 		data_dim(thread_data, dim, mode);
@@ -80,7 +92,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	int steps;
-	int result = iterate(thread_data, &steps, mode);
+	int result = iterate(thread_data, &steps, mode, cur_step);
 
 	// return data
 	if(thread_data->tid == ROOT) {
@@ -95,18 +107,21 @@ int main(int argc, char *argv[]) {
 	return(result);
 }
 
-int iterate(data *thread_data, int *iterations, int mode) {
+int iterate(data *thread_data, int *iterations, int mode, int *cur_step) {
 	for(int step = 0; step < MAX_ITERATIONS; step++) {
 		if(mode == MPI) {
 			thread_data->thread_error = 0.0;
 		} else {
 			if(thread_data->tid == ROOT) {
 				*(thread_data->global_error) = 0.0;
+				*cur_step = step;
 			}
+			// ensure global_error is reset before proceeding
+			while(*cur_step != step) {
+				printf("");
+			}
+			// int barrier_result = ilib_msg_barrier(ILIB_GROUP_SIBLINGS);
 		}
-
-		// ensure global_error is reset before proceeding
-		// int barrier_result = ilib_msg_barrier(ILIB_GROUP_SIBLINGS);
 
 		int i;
 		for(int row = 0; row < thread_data->thread_rows; row++) {		// i
