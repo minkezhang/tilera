@@ -103,10 +103,11 @@ int iterate(data *thread_data, int *iterations, int mode) {
 			if(thread_data->tid == ROOT) {
 				*(thread_data->global_error) = 0.0;
 			}
-
-			// ensure global_error is reset before proceeding
-			ilib_msg_barrier(ILIB_GROUP_SIBLINGS);
 		}
+
+		// ensure global_error is reset before proceeding
+		// int barrier_result = ilib_msg_barrier(ILIB_GROUP_SIBLINGS);
+
 		int i;
 		for(int row = 0; row < thread_data->thread_rows; row++) {		// i
 			i = thread_data->thread_offset + row;				// global_i
@@ -234,7 +235,6 @@ int slave_initialize(data *thread_data, int mode) {
 		thread_data->thread_xt = instance->xt;
 		thread_data->error_lock = instance->error_lock;
 		thread_data->global_error = instance->global_error;
-
 	}
 	return(0);
 }

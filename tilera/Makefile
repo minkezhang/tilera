@@ -9,7 +9,6 @@ EXECUTABLE=jacobi
 OUT=check_out.txt
 PIPE=pipe
 CORES=5
-MODE=1
 RUN=run.sh
 SAMPLE=sample
 RESULTS=results
